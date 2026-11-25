@@ -210,14 +210,30 @@ function burst(kind) {
   if (RM) return;
   const fx = document.getElementById("fx"); if (!fx) return;
   const px = isPixel(), win = kind === "win";
-  const cols = px ? ["#ffe14a", "#ffe14a", "#ffe14a", "#7dff3a", "#29e7ff"] : ["#ff5a6e", "#6ea8ff", "#3ddc97", "#ffb547", "#a98bff", "#52d6ff"];
-  const count = win ? (px ? 44 : 90) : 28;
   let h = "";
-  for (let i = 0; i < count; i++) {
-    const x = (Math.random() * 100).toFixed(1), d = (win ? 1.7 + Math.random() * 1.6 : 3.6 + Math.random() * 2.6).toFixed(2);
-    const del = (Math.random() * (win ? .45 : 1.4)).toFixed(2), dx = Math.round((Math.random() * 2 - 1) * (win ? 170 : 70));
-    const r = Math.round((Math.random() * 2 - 1) * (win ? 900 : 240)), sz = win ? (px ? 12 : 7 + Math.round(Math.random() * 6)) : (px ? 8 : 12 + Math.round(Math.random() * 10));
-    h += `<i class="${win ? "cf" : "sn"}${px ? " px" : ""}" style="--x:${x}vw;--d:${d}s;--del:${del}s;--dx:${dx}px;--r:${r}deg;--s:${sz}px${win ? ";--c:" + cols[i % cols.length] : ""}"></i>`;
+  if (win) {
+    /* confetti (coins in pixel mode) bursts out of the "Cracked it" stamp, then falls with a bit of gravity */
+    const big = document.querySelector("#result .big"), r = big ? big.getBoundingClientRect() : null;
+    const ox = r && r.bottom > 0 && r.top < innerHeight ? r.left + r.width / 2 : innerWidth / 2;
+    /* never burst from right at the top of the screen, or the confetti flies out of sight */
+    const oy = Math.max(r && r.bottom > 0 && r.top < innerHeight ? r.top + r.height / 2 : innerHeight * .35, Math.min(220, innerHeight * .3));
+    const room = oy - 30;
+    const cols = px ? ["#ffe14a", "#ffe14a", "#ffe14a", "#7dff3a", "#29e7ff"] : ["#ff5a6e", "#6ea8ff", "#3ddc97", "#ffb547", "#a98bff", "#52d6ff"];
+    const count = px ? 46 : 96, spread = Math.min(innerWidth * .45, 460);
+    for (let i = 0; i < count; i++) {
+      const ang = Math.random() * Math.PI, power = .45 + Math.random() * .55;
+      const dx = Math.round(Math.cos(ang) * spread * power), up = -Math.round(Math.min(room, (90 + Math.sin(ang) * 260) * power));
+      const d = (1.9 + Math.random() * 1.1).toFixed(2), del = (Math.random() * .12).toFixed(2), rot = Math.round((Math.random() * 2 - 1) * 1080);
+      const sz = px ? 12 : 7 + Math.round(Math.random() * 6);
+      h += `<i class="cf${px ? " px" : ""}" style="left:${ox.toFixed(0)}px;top:${oy.toFixed(0)}px;--dx:${dx}px;--up:${up}px;--fall:${Math.round(innerHeight - oy + 80)}px;--d:${d}s;--del:${del}s;--r:${rot}deg;--s:${sz}px;--c:${cols[i % cols.length]}"></i>`;
+    }
+  } else {
+    /* snow drifts down when a case goes cold */
+    for (let i = 0; i < 28; i++) {
+      const x = (Math.random() * 100).toFixed(1), d = (3.6 + Math.random() * 2.6).toFixed(2), del = (Math.random() * 1.4).toFixed(2);
+      const dx = Math.round((Math.random() * 2 - 1) * 70), rot = Math.round((Math.random() * 2 - 1) * 240), sz = px ? 8 : 12 + Math.round(Math.random() * 10);
+      h += `<i class="sn${px ? " px" : ""}" style="left:${x}vw;--d:${d}s;--del:${del}s;--dx:${dx}px;--r:${rot}deg;--s:${sz}px"></i>`;
+    }
   }
   fx.innerHTML = h;
   clearTimeout(burst.t);

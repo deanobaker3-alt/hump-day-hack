@@ -19,8 +19,8 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://deanobaker3-alt.github.io/hump-day-hack/">
 <meta property="og:image" content="https://deanobaker3-alt.github.io/hump-day-hack/preview.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
+<meta property="og:image:width" content="2400">
+<meta property="og:image:height" content="1260">
 <meta property="og:image:alt" content="Hump Day Hack: a new IT case to crack every Wednesday">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@WalkingITuk">
@@ -360,9 +360,16 @@ footer .soc a:hover{color:var(--text);border-color:var(--accent);text-decoration
 
 /* ================= CRACKED IT / GONE COLD ================= */
 #fx{position:fixed;inset:0;pointer-events:none;z-index:84;overflow:hidden}
-#fx i{position:absolute;top:-40px;left:var(--x);width:var(--s);height:calc(var(--s) * .5);background:var(--c);border-radius:2px;will-change:transform;animation:fall var(--d) cubic-bezier(.3,.55,.5,1) var(--del) both}
-#fx i.cf.px{height:var(--s);border-radius:0;box-shadow:inset -3px -3px 0 rgba(0,0,0,.3),inset 2px 2px 0 rgba(255,255,255,.45);animation:fall var(--d) linear var(--del) both,coin .45s steps(3) var(--del) infinite}
-#fx i.sn{height:var(--s);background:none;border-radius:0;color:var(--snow);font:400 var(--s)/1 system-ui,sans-serif;animation-timing-function:linear}
+#fx i{position:absolute;width:var(--s);height:calc(var(--s) * .5);margin:calc(var(--s) * -.25) 0 0 calc(var(--s) * -.5);background:var(--c);border-radius:2px;will-change:transform,opacity}
+#fx i.cf{animation:pop var(--d) linear var(--del) both}
+#fx i.cf.px{height:var(--s);border-radius:0;box-shadow:inset -3px -3px 0 rgba(0,0,0,.3),inset 2px 2px 0 rgba(255,255,255,.45);animation:pop var(--d) linear var(--del) both,coin .45s steps(3) var(--del) infinite}
+@keyframes pop{
+  0%{transform:translate3d(0,0,0) rotate(0) scale(.3);opacity:0;animation-timing-function:cubic-bezier(.12,.8,.3,1)}
+  6%{opacity:1}
+  32%{transform:translate3d(var(--dx),var(--up),0) rotate(calc(var(--r) * .35)) scale(1);animation-timing-function:cubic-bezier(.55,0,.9,.6)}
+  85%{opacity:1}
+  100%{transform:translate3d(calc(var(--dx) * 1.45),var(--fall),0) rotate(var(--r)) scale(.9);opacity:0}}
+#fx i.sn{top:-40px;height:var(--s);background:none;border-radius:0;margin:0;color:var(--snow);font:400 var(--s)/1 system-ui,sans-serif;animation:fall var(--d) linear var(--del) both}
 #fx i.sn::before{content:"\2744\FE0E"}
 #fx i.sn.px{background:var(--snow);width:6px;height:6px}
 #fx i.sn.px::before{content:none}
