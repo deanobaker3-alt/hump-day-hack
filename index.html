@@ -13,7 +13,7 @@
 <meta name="author" content="Dean Baker">
 <meta name="copyright" content="© 2026 Dean Baker">
 <meta name="description" content="Hump Day Hack by Dean Baker: a new IT case every Wednesday at 7am. Read the ticket, open the evidence, find the real cause and pick the fix. Helpdesk, networking, Microsoft 365 and security. Free.">
-<meta property="og:site_name" content="Walking IT by Dean Baker">
+<meta property="og:site_name" content="Walking IT">
 <meta property="og:title" content="Hump Day Hack · a new IT case every Wednesday">
 <meta property="og:description" content="Read the ticket, open the evidence, find the real cause and pick the fix. Can you crack this week's case?">
 <meta property="og:type" content="website">
@@ -21,13 +21,13 @@
 <meta property="og:image" content="https://deanobaker3-alt.github.io/hump-day-hack/preview.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Hump Day Hack: a new IT case to crack every Wednesday, by Dean Baker">
+<meta property="og:image:alt" content="Hump Day Hack: a new IT case to crack every Wednesday">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@WalkingITuk">
 <meta name="twitter:title" content="Hump Day Hack · a new IT case every Wednesday">
 <meta name="twitter:description" content="Read the ticket, open the evidence, find the real cause and pick the fix. Can you crack this week's case?">
 <meta name="twitter:image" content="https://deanobaker3-alt.github.io/hump-day-hack/preview.png">
-<meta name="twitter:image:alt" content="Hump Day Hack: a new IT case to crack every Wednesday, by Dean Baker">
+<meta name="twitter:image:alt" content="Hump Day Hack: a new IT case to crack every Wednesday">
 <link rel="canonical" href="https://deanobaker3-alt.github.io/hump-day-hack/">
 <meta name="theme-color" content="#0a1020">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 29 8v8c0 7-5 12-13 14C8 28 3 23 3 16V8z' fill='%230a1020' stroke='%236ea8ff' stroke-width='2'/%3E%3Cpath d='M13 10.5v11l9-5.5z' fill='%23ff5a6e'/%3E%3C/svg%3E">
@@ -318,6 +318,14 @@ pre.share{margin:12px auto 10px;padding:10px 12px;background:var(--code);border:
 footer.wrap{margin:44px auto 0;border-top:1px solid var(--line);padding:18px 0 34px;font:12px var(--mono);color:var(--dim);display:flex;flex-wrap:wrap;gap:6px 18px}
 footer b{color:var(--muted);font-weight:600}
 [data-theme="pixel"] footer{border-top:3px solid var(--line2);font-size:16px}
+footer .fl{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
+footer a{color:var(--accent);text-decoration:none}
+footer a:hover{text-decoration:underline}
+footer .soc{display:inline-flex;gap:6px}
+footer .soc a{padding:2px 9px;border:1px solid var(--line2);border-radius:6px;color:var(--muted)}
+footer .soc a:hover{color:var(--text);border-color:var(--accent);text-decoration:none}
+[data-theme="pixel"] footer .soc a{border-radius:0;border-width:2px}
+
 .scrim{position:fixed;inset:0;background:rgba(3,6,14,.6);z-index:80;display:grid;place-items:start center;padding:10vh 16px 16px;animation:fadeIn .2s both;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .modal{background:var(--panel);border:1px solid var(--line2);border-radius:14px;width:min(600px,100%);box-shadow:0 30px 80px rgba(0,0,0,.5);animation:modalIn .32s cubic-bezier(.2,1,.3,1) both;max-height:80vh;overflow-y:auto}
@@ -447,9 +455,9 @@ a.wt:hover{border-color:var(--accent)}
 <div class="crt"></div>
 <a class="sr" href="#main">Skip to the case</a>
 <header class="top wrap">
-  <a class="brand" href="./" aria-label="Hump Day Hack home, by Dean Baker">
+  <a class="brand" href="./" aria-label="Hump Day Hack home">
     <svg class="logo" viewBox="0 0 34 34" aria-hidden="true"><path d="M17 2 31 9v8c0 8-6 13-14 15C9 30 3 25 3 17V9z" fill="none" stroke="var(--node)" stroke-width="1.8"/><path d="M14 11.5v11l9-5.5z" fill="var(--red)"/></svg>
-    <div><b>HUMP DAY <i>HACK</i></b><small>by Dean Baker</small></div>
+    <div><b>HUMP DAY <i>HACK</i></b><small>part of Walking <i class="itr">IT</i></small></div>
   </a>
   <span class="sp"></span>
   <div class="tb">
@@ -465,10 +473,9 @@ a.wt:hover{border-color:var(--accent)}
 </main>
 
 <footer class="wrap">
-  <span><b>Hump Day Hack</b> · part of <b>Walking <i class="itr">IT</i></b> by Dean Baker · © 2026 Dean Baker. All rights reserved.</span>
-  <span>Every company, person, IP address and domain in the cases is made up.</span>
-  <span>Your progress is saved in this browser only. No accounts, no tracking.</span>
-  <span>Not affiliated with Microsoft, GitHub or any other vendor mentioned.</span>
+  <span class="fl"><span>Made by <b>Dean Baker</b> · Got a case idea? DM <a href="https://x.com/WalkingITuk" target="_blank" rel="noopener">@WalkingITuk</a></span>
+    <span class="soc"><a href="https://x.com/WalkingITuk" target="_blank" rel="noopener" aria-label="Walking IT on X">X</a><a href="https://github.com/deanobaker3-alt" target="_blank" rel="noopener" aria-label="Dean Baker on GitHub">GitHub</a></span></span>
+  <span class="fl">Free, no sign-in, and your progress never leaves this browser. Every name, IP and domain in the cases is made up. Not affiliated with any vendor mentioned. © 2026 Dean Baker. All rights reserved.</span>
 </footer>
 <div id="modal"></div>
 <div id="toasts"></div>
