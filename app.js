@@ -4,7 +4,15 @@
    Progress lives in this browser only (localStorage). Nothing is sent anywhere. */
 (function () {
 "use strict";
-const SCH = window.HDH_SCHEDULE, TM = window.HDH_TIME, CASES = window.HDH_CASES || [];
+const SCH = window.HDH_SCHEDULE, TM = window.HDH_TIME, CASES = Array.isArray(window.HDH_CASES) ? window.HDH_CASES : [];
+/* failover: if a file didn't load (flaky connection, an old browser, a blocker), say so plainly instead of showing a blank page */
+function fail(what) {
+  const app = document.getElementById("app");
+  if (app) app.innerHTML = `<div class="panel splash"><p><b>${what}</b></p><p>Check your connection and refresh the page. If it keeps happening, try another browser.</p><p><button class="btn pri" type="button" id="reloadBtn">Refresh</button></p></div>`;
+  const b = document.getElementById("reloadBtn"); if (b) b.onclick = () => location.reload();
+}
+if (!SCH || !TM || !Array.isArray(SCH.cases) || !SCH.cases.length) { fail("This week's case didn't load."); return; }
+if (!CASES.length) { fail("The cases didn't load."); return; }
 const AREAS = SCH.areas, MAXN = SCH.cases.length;
 const THEMES = [["dark", "Simple · dark", "#0a1020"], ["light", "Simple · light", "#eef2f8"], ["pixel", "Pixel arcade", "#ff3ea5"]];
 const RM = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -40,14 +48,25 @@ const released = n => n >= 1 && n <= MAXN && !!caseOf(n) && (PREVIEW || TM.isOut
 /* live = out, and the next Wednesday hasn't come yet. Live cases count towards your streak. */
 const isLive = n => !PREVIEW && TM.isOut(n, now()) && !TM.isOut(n + 1, now());
 const currentN = () => PREVIEW ? MAXN : Math.min(TM.current(now()), MAXN);
-const liveN = () => { const c = TM.current(now()); return c && c <= MAXN && isLive(c) ? c : 0; };
+const liveN = () => { const c = TM.current(now()); return c && c <= MAXN && caseOf(c) && isLive(c) ? c : 0; };
 const areaName = a => (AREAS[a] || {}).name || a;
 
 /* ============================================================
    PROGRESS for one case
    picks hold the ORIGINAL option indexes from the data file, in the order they were chosen
    ============================================================ */
-function rec(n) { return S.data.cases[n] || {opened: [], picks: {cause: [], fix: []}}; }
+/* progress from storage is checked before use, so a damaged or hand-edited save can never break the page */
+function rec(n) {
+  const r = S.data.cases[n], c = caseOf(n);
+  const ids = new Set(c.evidence.map(e => e.id));
+  const okList = (a, max) => Array.isArray(a) ? a.filter((v, i) => Number.isInteger(v) && v >= 0 && v < max && a.indexOf(v) === i) : [];
+  if (!r || typeof r !== "object") return {opened: [], picks: {cause: [], fix: []}};
+  const p = r.picks && typeof r.picks === "object" ? r.picks : {};
+  return Object.assign({}, r, {
+    opened: Array.isArray(r.opened) ? r.opened.filter((v, i, a) => ids.has(v) && a.indexOf(v) === i) : [],
+    picks: {cause: okList(p.cause, c.cause.options.length), fix: okList(p.fix, c.fix.options.length)}
+  });
+}
 function put(n, r) { S.data.cases[n] = r; save(); }
 function state(n) {
   const c = caseOf(n), r = rec(n);
@@ -398,10 +417,16 @@ function render(justOpened) {
   const r = route();
   if (r.bounce) history.replaceState(null, "", location.pathname + location.search + (r.v === "case" ? "#case-" + r.n : ""));
   let html;
-  if (r.v === "archive") html = viewArchive();
-  else if (r.v === "case") html = viewCase(r.n, justOpened);
-  else if (r.v === "walk") html = viewWalkthrough(r.n);
-  else html = viewHome();
+  try {
+    if (r.v === "archive") html = viewArchive();
+    else if (r.v === "case") html = viewCase(r.n, justOpened);
+    else if (r.v === "walk") html = viewWalkthrough(r.n);
+    else html = viewHome();
+  } catch (e) {
+    /* failover: never a blank page */
+    try { console.error(e); } catch (x) {}
+    return fail("Something went wrong showing this page.");
+  }
   const key = r.v + (r.n || "");
   if (lastView && lastView !== key) wiOpen = false;
   $("#app").innerHTML = html;
@@ -474,7 +499,7 @@ async function share(n, forceCopy) {
 
 /* stats: live cases only (the real weekly game), so the archive can be enjoyed without gaming the streak */
 function stats() {
-  const all = Object.keys(S.data.cases).map(Number).filter(n => caseOf(n)).map(n => ({n, st: state(n), live: !!S.data.cases[n].live}));
+  const all = Object.keys(S.data.cases).map(Number).filter(n => caseOf(n) && S.data.cases[n]).map(n => ({n, st: state(n), live: !!S.data.cases[n].live}));
   const played = all.filter(x => x.st.done), cracked = played.filter(x => x.st.won);
   const liveWon = new Set(played.filter(x => x.live && x.st.won).map(x => x.n));
   let best = 0, run = 0;

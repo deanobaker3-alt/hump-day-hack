@@ -49,11 +49,26 @@ window.HDH_SCHEDULE = {
 window.HDH_TIME = (function () {
   const S = window.HDH_SCHEDULE;
   const pad = n => String(n).padStart(2, "0");
-  /* "YYYY-MM-DDTHH:MM" for a moment, as a UK clock shows it */
+  /* "YYYY-MM-DDTHH:MM" for a moment, as a UK clock shows it.
+     Uses the browser's time zone data; if that's missing (very old browsers), falls back to the UK rule itself:
+     BST (UTC+1) from 01:00 UTC on the last Sunday in March to 01:00 UTC on the last Sunday in October. */
+  let fmt = null;
+  try {
+    fmt = new Intl.DateTimeFormat("en-GB", {timeZone: S.timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23"});
+    if (!fmt.formatToParts) fmt = null;
+  } catch (e) { fmt = null; }
+  const lastSunday = (y, m) => { const d = new Date(Date.UTC(y, m + 1, 0)); return Date.UTC(y, m, d.getUTCDate() - d.getUTCDay(), 1); };
+  function ukStampByRule(ms) {
+    const y = new Date(ms).getUTCFullYear();
+    const bst = ms >= lastSunday(y, 2) && ms < lastSunday(y, 9);
+    const t = new Date(ms + (bst ? 3600000 : 0));
+    return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}T${pad(t.getUTCHours())}:${pad(t.getUTCMinutes())}`;
+  }
   function ukStamp(ms) {
+    if (!fmt) return ukStampByRule(ms);
     const p = {};
-    new Intl.DateTimeFormat("en-GB", {timeZone: S.timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23"})
-      .formatToParts(new Date(ms)).forEach(x => { p[x.type] = x.value; });
+    fmt.formatToParts(new Date(ms)).forEach(x => { p[x.type] = x.value; });
+    if (p.hour === "24") p.hour = "00";   /* a few older engines say 24:00 for midnight */
     return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
   }
   /* the UK date (YYYY-MM-DD) that case n goes live */
@@ -110,5 +125,5 @@ window.HDH_TIME = (function () {
     for (let i = len - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
     return idx;
   }
-  return {ukStamp, releaseDate, releaseStamp, releaseMs, isOut, current, niceRelease, until, order};
+  return {ukStamp, ukStampByRule, releaseDate, releaseStamp, releaseMs, isOut, current, niceRelease, until, order};
 })();
