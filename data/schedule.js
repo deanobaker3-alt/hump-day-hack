@@ -36,9 +36,11 @@ window.HDH_SCHEDULE = {
     {n: 20, area: "security",   title: "Prove you're not a robot"}
   ],
   walkingIT: "",
-  /* demo links for testers: ?d=CODE unlocks one case early. Keys are hashes of the codes (the codes themselves are kept
-     out of the public files). Delete a line to switch that link off. */
-  demos: {"8a2d7864": 20},
+  /* demo links for testers: ?d=CODE unlocks one case early, e.g. {"<hash of code>": 20}. Keys are hashes of the codes
+     (the codes themselves are kept out of the public files). Delete a line to switch that link off. */
+  demos: {},
+  /* hash of Dean's private preview code (#preview=CODE unlocks every case). Change it to retire the old link. */
+  previewKey: "15d0aabb",
   areas: {
     helpdesk:   {name: "Helpdesk",      walk: "ticketwalk", walkName: "Ticketwalk"},
     networking: {name: "Networking",    walk: "packetwalk", walkName: "Packetwalk"},

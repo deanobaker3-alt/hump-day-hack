@@ -26,7 +26,25 @@ const sess = {
   get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
   set(k, v) { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch (e) {} }
 };
-const now = () => Date.now();
+/* clock check: releases go by the web server's clock, not the device's, so moving a phone's clock forward can't unlock
+   future cases. If the server can't be reached (offline, blocked), the device clock is used so the page still works. */
+let clockOffset = 0;
+const now = () => Date.now() + clockOffset;
+function syncClock() {
+  return new Promise(done => {
+    if (!window.fetch) return done(false);
+    const t0 = Date.now(), ctl = window.AbortController ? new AbortController() : null;
+    const timer = setTimeout(() => { if (ctl) ctl.abort(); done(false); }, 2500);
+    /* a fresh address every time, so no cache can hand back an old Date header */
+    fetch("data/schedule.js?clock=" + t0, {method: "HEAD", cache: "no-store", signal: ctl ? ctl.signal : undefined})
+      .then(r => {
+        const d = Date.parse(r.headers.get("date") || ""), t1 = Date.now();
+        /* the Date header is to the nearest second, so only correct clocks that are more than a minute out */
+        if (Number.isFinite(d)) { const off = d + 500 - (t0 + t1) / 2; clockOffset = Math.abs(off) > 60000 ? off : 0; }
+        clearTimeout(timer); done(true);
+      }, () => { clearTimeout(timer); done(false); });
+  });
+}
 
 /* demo links (?d=CODE): one case, playable early, for one tester. Only a hash of each code is stored (in schedule.js),
    so the code itself never appears in the public files. Everything else on the site stays locked. */
@@ -37,9 +55,14 @@ const DEMO = (() => {
     return Number.isInteger(n) && CASES.some(c => c.n === n) ? n : 0;
   } catch (e) { return 0; }
 })();
-/* preview mode (#preview): every case playable, walkthroughs open, progress kept apart from the real thing */
-if (location.hash === "#preview" && !DEMO) { sess.set("hdh:preview", "1"); history.replaceState(null, "", location.pathname + location.search); }
-const PREVIEW = !DEMO && sess.get("hdh:preview") === "1";
+/* preview mode (#preview=CODE): every case playable, walkthroughs open, progress kept apart from the real thing.
+   Only a hash of the code is public (previewKey in schedule.js). A bare #preview, or a wrong code, just shows the normal site. */
+const pm = location.hash.match(/^#preview(?:=([a-z0-9]+))?$/i);
+if (pm) {
+  if (pm[1] && !DEMO) sess.set("hdh:preview", pm[1]);
+  history.replaceState(null, "", location.pathname + location.search);
+}
+const PREVIEW = !DEMO && !!SCH.previewKey && hashCode(sess.get("hdh:preview") || "") === SCH.previewKey;
 const K = {theme: "walkingit:theme", data: DEMO ? "hdh:demo:v1" : PREVIEW ? "hdh:preview:v1" : "hdh:v1"};
 const S = {theme: store.get(K.theme, "dark"), data: store.get(K.data, null), cur: -1, live: -1, focus: null};
 if (!THEMES.some(t => t[0] === S.theme)) S.theme = "dark";
@@ -636,7 +659,11 @@ setInterval(() => {
    BOOT
    ============================================================ */
 renderChrome();
-render();
+/* check the real time first (usually well under a second), then draw. Re-check whenever the tab comes back into view. */
+syncClock().then(() => render());
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") syncClock().then(() => { if (TM.current(now()) !== S.cur || liveN() !== S.live) render(); });
+});
 window.HUMPDAYHACK = Object.freeze({name: "Hump Day Hack", author: "Dean Baker", copyright: "© 2026 Dean Baker. All rights reserved."});
 window.__hdh = {S, state, shareText, stats, setTheme, isLive, released, route, render, preview: PREVIEW, demo: DEMO};
 try { console.log("%cHUMP DAY %cHACK%c  by Dean Baker · © 2026", "font:700 14px monospace;color:#6ea8ff", "font:italic 700 14px monospace;color:#ff5a6e", "font:12px monospace;color:#8193b2"); } catch (e) {}
