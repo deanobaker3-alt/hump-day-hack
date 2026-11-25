@@ -36,6 +36,9 @@ window.HDH_SCHEDULE = {
     {n: 20, area: "security",   title: "Prove you're not a robot"}
   ],
   walkingIT: "",
+  /* demo links for testers: ?d=CODE unlocks one case early. Keys are hashes of the codes (the codes themselves are kept
+     out of the public files). Delete a line to switch that link off. */
+  demos: {"8a2d7864": 20},
   areas: {
     helpdesk:   {name: "Helpdesk",      walk: "ticketwalk", walkName: "Ticketwalk"},
     networking: {name: "Networking",    walk: "packetwalk", walkName: "Packetwalk"},

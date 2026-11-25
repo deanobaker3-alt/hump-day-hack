@@ -28,10 +28,19 @@ const sess = {
 };
 const now = () => Date.now();
 
+/* demo links (?d=CODE): one case, playable early, for one tester. Only a hash of each code is stored (in schedule.js),
+   so the code itself never appears in the public files. Everything else on the site stays locked. */
+const hashCode = s => { let h = 0x811c9dc5; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16).padStart(8, "0"); };
+const DEMO = (() => {
+  try {
+    const d = new URLSearchParams(location.search).get("d"), n = d && SCH.demos ? SCH.demos[hashCode(d)] : 0;
+    return Number.isInteger(n) && CASES.some(c => c.n === n) ? n : 0;
+  } catch (e) { return 0; }
+})();
 /* preview mode (#preview): every case playable, walkthroughs open, progress kept apart from the real thing */
-if (location.hash === "#preview") { sess.set("hdh:preview", "1"); history.replaceState(null, "", location.pathname + location.search); }
-const PREVIEW = sess.get("hdh:preview") === "1";
-const K = {theme: "walkingit:theme", data: PREVIEW ? "hdh:preview:v1" : "hdh:v1"};
+if (location.hash === "#preview" && !DEMO) { sess.set("hdh:preview", "1"); history.replaceState(null, "", location.pathname + location.search); }
+const PREVIEW = !DEMO && sess.get("hdh:preview") === "1";
+const K = {theme: "walkingit:theme", data: DEMO ? "hdh:demo:v1" : PREVIEW ? "hdh:preview:v1" : "hdh:v1"};
 const S = {theme: store.get(K.theme, "dark"), data: store.get(K.data, null), cur: -1, live: -1, focus: null};
 if (!THEMES.some(t => t[0] === S.theme)) S.theme = "dark";
 if (!S.data || typeof S.data !== "object" || !S.data.cases) S.data = {v: 1, cases: {}};
@@ -44,7 +53,7 @@ const T = (simple, pixel) => isPixel() ? pixel : simple;
    ============================================================ */
 const caseOf = n => CASES.find(c => c.n === n);
 const metaOf = n => SCH.cases.find(c => c.n === n);
-const released = n => n >= 1 && n <= MAXN && !!caseOf(n) && (PREVIEW || TM.isOut(n, now()));
+const released = n => n >= 1 && n <= MAXN && !!caseOf(n) && (PREVIEW || n === DEMO || TM.isOut(n, now()));
 /* live = out, and the next Wednesday hasn't come yet. Live cases count towards your streak. */
 const isLive = n => !PREVIEW && TM.isOut(n, now()) && !TM.isOut(n + 1, now());
 const currentN = () => PREVIEW ? MAXN : Math.min(TM.current(now()), MAXN);
@@ -244,11 +253,12 @@ function burst(kind) {
    VIEWS
    ============================================================ */
 function header(o) {
-  const tabs = PREVIEW ? "" : `<nav class="tabs" aria-label="Hump Day Hack">
+  const tabs = PREVIEW || DEMO ? "" : `<nav class="tabs" aria-label="Hump Day Hack">
       <a class="tab" href="#" ${o.tab === "week" ? 'aria-current="page"' : ""}>${T("This week", "THIS WEEK")}</a>
       <a class="tab" href="#archive" ${o.tab === "archive" ? 'aria-current="page"' : ""}>${T("Case archive", "ARCHIVE")}</a></nav>`;
   const prev = PREVIEW ? `<div class="preview" role="note"><span>${T("Preview mode: every case is unlocked and nothing counts towards real stats. Players don't see this.", "PREVIEW MODE: ALL CASES UNLOCKED")}</span><button data-act="endPreview">${T("Leave preview", "EXIT")}</button></div>` : "";
-  return `${prev}<div class="hd">
+  const demo = DEMO ? `<div class="preview" role="note"><span>${T(`Demo link: you're playing case #${DEMO} before it goes live. Please keep this link to yourself.`, `DEMO: CASE #${DEMO} EARLY ACCESS`)}</span></div>` : "";
+  return `${prev}${demo}<div class="hd">
     <div class="kick"><span class="hdh">HUMP DAY <i>HACK</i></span><span>${esc(T("A new case every Wednesday, " + nice7(), "NEW CASE EVERY WEDNESDAY"))}</span></div>
     <h1 id="pageH" tabindex="-1">${o.h1}</h1>
     ${o.status ? `<p class="status" id="status">${o.status}</p>` : ""}
@@ -257,7 +267,7 @@ function header(o) {
 function nice7() { const [h, mi] = SCH.releaseTime.split(":").map(Number); return `${h % 12 || 12}${mi ? ":" + String(mi).padStart(2, "0") : ""}${h < 12 ? "am" : "pm"}`; }
 
 function statusFor(n) {
-  if (PREVIEW) return `${esc(areaName(metaOf(n).area))} · ${T("Goes live", "LIVE")} ${esc(TM.niceRelease(n))}`;
+  if (PREVIEW || (n === DEMO && !TM.isOut(n, now()))) return `${DEMO ? T("Demo", "DEMO") + " · " : ""}${esc(areaName(metaOf(n).area))} · ${T(DEMO ? "Goes live for everyone" : "Goes live", "LIVE")} ${esc(TM.niceRelease(n))}`;
   if (isLive(n)) return `${T("Live now", "LIVE NOW")} · ${esc(areaName(metaOf(n).area))} · ${T("Walkthrough unlocks", "WALKTHROUGH IN")} <b>${esc(T(TM.niceRelease(n + 1), TM.until(TM.releaseMs(n + 1), now()).toUpperCase()))}</b>${isPixel() ? "" : ` (in <span id="cd">${esc(TM.until(TM.releaseMs(n + 1), now()))}</span>)`}`;
   return `${esc(areaName(metaOf(n).area))} · ${T("From", "FROM")} ${esc(TM.niceRelease(n))} · ${T("Played after its week, so it doesn't count towards your streak", "BONUS LEVEL: NO STREAK")}`;
 }
@@ -417,6 +427,11 @@ function viewHome() {
 function route() {
   const h = location.hash.replace(/^#/, "");
   let mm;
+  /* a demo link only ever shows its own case and that case's walkthrough */
+  if (DEMO) {
+    if (h === `case-${DEMO}/walkthrough`) return {v: "walk", n: DEMO};
+    return {v: "case", n: DEMO, bounce: h !== `case-${DEMO}` && h !== ""};
+  }
   if (h === "archive") return {v: "archive"};
   if ((mm = h.match(/^case-(\d+)(\/walkthrough)?$/))) {
     const n = +mm[1];
@@ -623,6 +638,6 @@ setInterval(() => {
 renderChrome();
 render();
 window.HUMPDAYHACK = Object.freeze({name: "Hump Day Hack", author: "Dean Baker", copyright: "© 2026 Dean Baker. All rights reserved."});
-window.__hdh = {S, state, shareText, stats, setTheme, isLive, released, route, render, preview: PREVIEW};
+window.__hdh = {S, state, shareText, stats, setTheme, isLive, released, route, render, preview: PREVIEW, demo: DEMO};
 try { console.log("%cHUMP DAY %cHACK%c  by Dean Baker · © 2026", "font:700 14px monospace;color:#6ea8ff", "font:italic 700 14px monospace;color:#ff5a6e", "font:12px monospace;color:#8193b2"); } catch (e) {}
 })();
