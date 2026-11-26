@@ -249,7 +249,7 @@ function wiCard(area) {
     : `<p>${T("Opening soon. Follow", "OPENING SOON. FOLLOW")} <a href="https://x.com/WalkingITuk" target="_blank" rel="noopener">@WalkingITuk</a> ${T("on X to hear when it does.", "ON X FOR LAUNCH DAY.")}</p>`;
   return `<div class="wi${wiOpen ? " open" : ""}">
     <button class="wi-face" data-act="wi" aria-expanded="${wiOpen}" aria-controls="wiPeek">
-      <svg class="wi-logo" viewBox="0 0 34 34" aria-hidden="true"><path d="M17 2 31 9v8c0 8-6 13-14 15C9 30 3 25 3 17V9z" fill="none" stroke="var(--node)" stroke-width="1.8"/><path d="M14 11.5v11l9-5.5z" fill="var(--red)"/></svg>
+      <img class="wi-logo" src="brand/walkingit-${T("lens-128.webp", "lens-px19.png")}" alt="" width="34" height="34">
       <span class="wi-txt"><small>${T("Enjoyed that?", "ENJOYED THAT?")}</small><b>${T("Meet", "MEET")} Walking <i class="itr">IT</i></b><span>${T("Four interactive walks through real IT, by the same maker. Tap for a peek.", "4 WALKS THROUGH REAL IT. TAP TO PEEK.")}</span></span>
       <svg class="wi-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
     </button>
