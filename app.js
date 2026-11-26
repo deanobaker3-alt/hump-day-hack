@@ -92,10 +92,15 @@ function rec(n) {
   const r = S.data.cases[n], c = caseOf(n);
   const ids = new Set(c.evidence.map(e => e.id));
   const okList = (a, max) => Array.isArray(a) ? a.filter((v, i) => Number.isInteger(v) && v >= 0 && v < max && a.indexOf(v) === i) : [];
-  if (!r || typeof r !== "object") return {opened: [], picks: {cause: [], fix: []}};
+  if (!r || typeof r !== "object") return {opened: [], asked: -1, picks: {cause: [], fix: []}};
   const p = r.picks && typeof r.picks === "object" ? r.picks : {};
+  /* only two of the three locked clues can ever be opened, so an older save with more keeps just the first two */
+  let lockedSeen = 0;
+  const opened = Array.isArray(r.opened) ? r.opened.filter((v, i, a) => ids.has(v) && a.indexOf(v) === i)
+    .filter(id => { const ev = c.evidence.find(e => e.id === id); return ev.open || ++lockedSeen <= MAXCLUES; }) : [];
+  const asked = Number.isInteger(r.asked) && c.ask && r.asked >= 0 && r.asked < c.ask.options.length ? r.asked : -1;
   return Object.assign({}, r, {
-    opened: Array.isArray(r.opened) ? r.opened.filter((v, i, a) => ids.has(v) && a.indexOf(v) === i) : [],
+    opened, asked,
     picks: {cause: okList(p.cause, c.cause.options.length), fix: okList(p.fix, c.fix.options.length)}
   });
 }
@@ -108,8 +113,10 @@ function state(n) {
   const clues = c.evidence.filter(e => !e.open && r.opened.includes(e.id)).length;
   const cold = wrongs >= 3 && !fixDone;
   const done = fixDone || cold;
-  return {r, wrongs, clues, causeDone, fixDone, cold, done, won: fixDone && !cold, stage: !causeDone ? "cause" : "fix", started: r.opened.length > 0 || r.picks.cause.length > 0};
+  return {r, wrongs, clues, causeDone, fixDone, cold, done, won: fixDone && !cold, stage: !causeDone ? "cause" : "fix", asked: r.asked, started: r.opened.length > 0 || r.picks.cause.length > 0 || r.asked >= 0};
 }
+/* you may open at most two of the three locked clues. Each one you open still costs you a rank. */
+const MAXCLUES = 2;
 const RANKS = [["Head of IT", "HEAD OF IT"], ["Senior engineer", "SENIOR ENGINEER"], ["Second line hero", "2ND LINE HERO"], ["First line legend", "1ST LINE LEGEND"], ["Solid start", "SOLID START"], ["Made it, just", "MADE IT. JUST."]];
 function rankOf(st) { if (!st.won) return T("Case gone cold", "GAME OVER"); const r = RANKS[Math.min(RANKS.length - 1, st.clues + st.wrongs)]; return T(r[0], r[1]); }
 
@@ -121,7 +128,7 @@ function shareText(n) {
     if (!picks.includes(ok)) return picks.length ? "🟥" : "⬛";
     return picks.length === 1 ? "🟩" : "🟨";
   };
-  const clues = "🔍".repeat(st.clues) + "⬜".repeat(3 - st.clues);
+  const clues = "🔍".repeat(st.clues) + "⬜".repeat(MAXCLUES - st.clues);
   const url = location.origin + location.pathname.replace(/index\.html$/, "");
   return `Hump Day Hack #${n} · ${areaName(m.area)}\n` +
     (st.won ? `🔓 Cracked it · ${rankOf(st)}\n` : `🧊 Case gone cold\n`) +
@@ -160,12 +167,14 @@ function bodyHTML(ev, marks) {
   return out + (open ? "</mark>" : "");
 }
 function evCard(n, ev, opts) {
-  const head = `<div class="ev-h"><span class="ev-ic">${icon(opts.locked ? "lock" : ev.kind)}</span><div class="ev-t"><b>${esc(ev.title)}</b><small>${esc(ev.src)}</small></div><span class="ev-k">${esc(T(KIND[ev.kind], KIND[ev.kind].toUpperCase()))}</span></div>`;
+  const head = `<div class="ev-h"><span class="ev-ic">${icon(opts.locked ? "lock" : ev.kind)}</span><div class="ev-t"><b>${esc(ev.title)}</b><small>${esc(ev.src)}</small></div>${opts.best ? `<span class="tagok">${T("Best clue", "BEST")}</span>` : ""}<span class="ev-k">${esc(T(KIND[ev.kind], KIND[ev.kind].toUpperCase()))}</span></div>`;
   if (opts.locked) {
-    const left = 3 - opts.cluesUsed;
-    return `<article class="ev locked" id="ev-${ev.id}" aria-label="Locked evidence: ${esc(ev.title)}">${head}
-      <div class="lockrow"><div class="ghost" aria-hidden="true"><i></i><i></i><i></i></div>
-      <button class="btn sm" data-open="${ev.id}">${T(`Open · uses 1 clue (${left} left)`, `OPEN · 1 CLUE (${left} LEFT)`)}</button></div></article>`;
+    const left = MAXCLUES - opts.cluesUsed;
+    const act = left > 0
+      ? `<button class="btn sm" data-open="${ev.id}">${T(`Open · uses 1 clue (${left} left)`, `OPEN · 1 CLUE (${left} LEFT)`)}</button>`
+      : `<span class="spent">${T("Out of clues: this one stays locked until the case is closed.", "NO CLUES LEFT")}</span>`;
+    return `<article class="ev locked${left > 0 ? "" : " spent"}" id="ev-${ev.id}" aria-label="Locked evidence: ${esc(ev.title)}">${head}
+      <div class="lockrow"><div class="ghost" aria-hidden="true"><i></i><i></i><i></i></div>${act}</div></article>`;
   }
   return `<article class="ev${opts.just ? " just" : ""}" id="ev-${ev.id}" tabindex="-1" aria-label="Evidence: ${esc(ev.title)}">${head}
     <pre class="body" tabindex="0" aria-label="${esc(ev.title)}">${bodyHTML(ev, opts.marks)}</pre>
@@ -195,6 +204,26 @@ function typeIt() {
     setTimeout(step, 15);
   };
   setTimeout(step, 250);
+}
+
+/* ASK THE CALLER: one free question per case. You only hear the answer to the one you pick, until the case is closed. */
+function askHTML(n, st) {
+  const c = caseOf(n), a = c.ask; if (!a) return "";
+  const order = TM.order(n, "ask", a.options.length), asked = st.asked, all = st.done;
+  const who = esc(a.who), Who = esc(a.who.charAt(0).toUpperCase() + a.who.slice(1));
+  const sub = all ? T("Case closed: here's what each question would have told you.", "ALL ANSWERS")
+    : asked >= 0 ? T("One question per case. Their answer stays here.", "1 QUESTION PER CASE")
+    : T(`Free, but only one, so pick the one that tells you most.`, "FREE · PICK 1");
+  const rows = order.map((oi, pos) => {
+    const o = a.options[oi], mine = oi === asked, show = mine || all;
+    const tag = all && o.best ? `<span class="tagok">${T("Best question", "BEST")}</span>` : "";
+    const q = asked < 0 && !all
+      ? `<button class="aq" data-ask="${oi}" id="ask-${pos}"><span class="k" aria-hidden="true">?</span><span>${esc(o.q)}</span></button>`
+      : `<div class="aq done${mine ? " mine" : ""}"><span class="k" aria-hidden="true">${mine ? "✓" : "?"}</span><span>${esc(o.q)}${mine ? `<span class="sr"> (you asked this)</span>` : ""}${tag}</span></div>`;
+    return q + (show ? `<p class="ans${mine ? " mine" : ""}" id="ans-${oi}" tabindex="-1"><b>${Who}</b>${esc(o.a)}</p>` : "");
+  }).join("");
+  return `<section class="panel ask" aria-labelledby="askH"><div class="ph"><h2 id="askH">${T(`Ask ${who} one question`, "ASK 1 QUESTION")}</h2><span class="sp"></span><span class="ev-k">${T("Free", "FREE")}</span></div>
+    <p class="asub">${sub}</p><div class="aqs">${rows}</div></section>`;
 }
 
 /* ============================================================
@@ -308,7 +337,8 @@ function viewCase(n, justOpened) {
   <div class="case">
     <div class="col">
       ${briefHTML(c, typing)}
-      <div class="sec"><h2>${T("Evidence locker", "EVIDENCE")}</h2><span>${st.done ? T("Case closed: everything's unlocked.", "ALL UNLOCKED") : T("Two items are open. Each locked one costs a clue.", "2 OPEN · 3 LOCKED")}</span></div>
+      ${askHTML(n, st)}
+      <div class="sec"><h2>${T("Evidence locker", "EVIDENCE")}</h2><span>${st.done ? T("Case closed: everything's unlocked.", "ALL UNLOCKED") : st.clues >= MAXCLUES ? T("You've used both clues. The last locked item stays shut.", "NO CLUES LEFT") : T("Two items are open. You can unlock two of the other three, and each one costs a clue.", "2 OPEN · UNLOCK 2 OF 3")}</span></div>
       ${evid}
     </div>
     <aside class="col"><div class="panel verdict" id="verdict" aria-labelledby="verdictH">${verdictHTML(n)}</div></aside>
@@ -333,9 +363,22 @@ function stageHTML(n, which, st) {
   return `<div class="stage"><h3><small>${num} of 2</small>${esc(q.q)}</h3><div class="opts" role="group" aria-label="${esc(q.q)}">${btns}</div>${fb}</div>`;
 }
 
+/* how you investigated: feedback only, it never changes your rank */
+function instinctHTML(n, st) {
+  const a = caseOf(n).ask; if (!a) return "";
+  const bestQ = a.options.findIndex(o => o.best);
+  const openedLocked = st.r.opened.filter(id => !caseOf(n).evidence.find(e => e.id === id).open);
+  const q = st.asked < 0 ? T("You didn't ask a question. It's free next time!", "NO QUESTION ASKED")
+    : st.asked === bestQ ? T("You asked the most useful question.", "BEST QUESTION!") : T("Good to ask, but another question would have told you more.", "OK QUESTION");
+  const e = openedLocked.length === 0 ? T("No clues opened. Proper detective work.", "ZERO CLUES!")
+    : openedLocked.length === 2 && a.best.every(id => openedLocked.includes(id)) ? T("You opened the two most useful clues.", "BEST CLUES!")
+    : T("The walkthrough shows which clues cracked it fastest.", "SEE WALKTHROUGH");
+  return `<ul class="inst" aria-label="${T("How you investigated", "INVESTIGATION")}"><li>${q}</li><li>${e}</li></ul>`;
+}
+
 function verdictHTML(n) {
   const st = state(n), c = caseOf(n), m = metaOf(n);
-  const meters = `<div class="meters"><span>${T("Clues used", "CLUES")} ${pips(st.clues, 3, "on")}<span class="sr">${st.clues} of 3</span></span><span>${T("Wrong turns", "LIVES LOST")} ${pips(st.wrongs, 3, "x")}<span class="sr">${st.wrongs} of 3</span></span></div>`;
+  const meters = `<div class="meters"><span>${T("Clues used", "CLUES")} ${pips(st.clues, MAXCLUES, "on")}<span class="sr">${st.clues} of ${MAXCLUES}</span></span><span>${T("Wrong turns", "LIVES LOST")} ${pips(st.wrongs, 3, "x")}<span class="sr">${st.wrongs} of 3</span></span></div>`;
   let top = "";
   if (st.done) {
     const ok = w => c[w].options.find(o => o.ok);
@@ -349,6 +392,7 @@ function verdictHTML(n) {
       <div class="rank">${esc(st.won ? rankOf(st) : T("Out of wrong turns", "NO LIVES LEFT"))}</div>
       <pre class="share" aria-label="Your result, ready to share">${esc(shareText(n))}</pre>
       <div class="row"><button class="btn pri" data-act="share">${T("Share result", "SHARE")}</button><button class="btn" data-act="copy">${T("Copy", "COPY")}</button></div>
+      ${instinctHTML(n, st)}
       <div class="answers"><p><b>${T("What was wrong", "CAUSE")}</b>${esc(ok("cause").t)}</p><p><b>${T("The fix", "FIX")}</b>${esc(ok("fix").t)}</p></div>
       ${next}
     </div>`;
@@ -371,8 +415,11 @@ function viewWalkthrough(n) {
   <div class="case">
     <div class="col">
       ${briefHTML(c)}
-      <div class="sec"><h2>${T("The evidence, explained", "EVIDENCE")}</h2><span>${T("The lines that matter are highlighted.", "KEY LINES HIGHLIGHTED")}</span></div>
-      ${c.evidence.map(ev => evCard(n, ev, {marks: true, note: true})).join("")}
+      ${c.ask ? `<section class="panel ask" aria-labelledby="askWH"><div class="ph"><h2 id="askWH">${T("The question to ask", "BEST QUESTION")}</h2></div>
+        <div class="aqs">${c.ask.options.map(o => `<div class="aq done${o.best ? " mine" : ""}"><span class="k" aria-hidden="true">${o.best ? "✓" : "?"}</span><span>${esc(o.q)}${o.best ? `<span class="tagok">${T("Best question", "BEST")}</span>` : ""}</span></div><p class="ans${o.best ? " mine" : ""}"><b>${esc(c.ask.who.charAt(0).toUpperCase() + c.ask.who.slice(1))}</b>${esc(o.a)}</p>`).join("")}</div>
+        <p class="ev-note atip"><b>${T("Why that one", "WHY")}</b>${esc(c.ask.tip)}</p></section>` : ""}
+      <div class="sec"><h2>${T("The evidence, explained", "EVIDENCE")}</h2><span>${T("The lines that matter are highlighted.", "KEY LINES HIGHLIGHTED")}${c.ask ? T(" Best two clues to unlock are marked.", " BEST 2 CLUES MARKED.") : ""}</span></div>
+      ${c.evidence.map(ev => evCard(n, ev, {marks: true, note: true, best: c.ask && c.ask.best.includes(ev.id)})).join("")}
     </div>
     <aside class="col">
       <section class="panel" aria-labelledby="qH"><div class="ph"><h2 id="qH">${T("Every answer, explained", "ANSWERS")}</h2></div>
@@ -423,7 +470,7 @@ function viewArchive() {
 function howCols() {
   return `<div class="how">
     <div style="--c:var(--cyan)"><b>${T("1 · Read the brief", "1 · THE MISSION")}</b><p>${T("A real-world ticket or alert lands on your desk.", "A TICKET OR ALERT LANDS.")}</p></div>
-    <div style="--c:var(--amber)"><b>${T("2 · Dig into the evidence", "2 · FIND CLUES")}</b><p>${T("Two items are open. Each locked one costs a clue.", "2 FREE, 3 COST A CLUE.")}</p></div>
+    <div style="--c:var(--amber)"><b>${T("2 · Ask, then dig in", "2 · FIND CLUES")}</b><p>${T("Ask the caller one free question. Two clues are open, and you can unlock two more.", "1 FREE QUESTION. UNLOCK 2 OF 3 CLUES.")}</p></div>
     <div style="--c:var(--green)"><b>${T("3 · Name the cause, pick the fix", "3 · CRACK IT")}</b><p>${T("Three wrong turns and the case goes cold.", "3 MISSES = GAME OVER.")}</p></div>
     <div style="--c:var(--red)"><b>${T("4 · Share, then learn", "4 · SHARE")}</b><p>${T("Post your result. The walkthrough unlocks next Wednesday.", "WALKTHROUGH NEXT WEEK.")}</p></div>
   </div>`;
@@ -508,11 +555,20 @@ function toast(msg) { const d = document.createElement("div"); d.className = "to
 function openEvidence(n, id) {
   const st = state(n); if (st.done) return;
   const ev = caseOf(n).evidence.find(e => e.id === id);
-  if (!ev || ev.open || st.r.opened.includes(id)) return;
+  if (!ev || ev.open || st.r.opened.includes(id) || st.clues >= MAXCLUES) return;
   const r = st.r; r.opened = r.opened.concat(id); put(n, r);
   S.focus = "ev-" + id;
   render(id);
-  announce(`${ev.title} opened. ${3 - state(n).clues} clues left.`);
+  const left = MAXCLUES - state(n).clues;
+  announce(`${ev.title} opened. ${left ? left + " clue left." : "That was your last clue."}`);
+}
+function ask(n, oi) {
+  const st = state(n), a = caseOf(n).ask;
+  if (st.done || st.asked >= 0 || !a || !a.options[oi]) return;
+  const r = st.r; r.asked = oi; put(n, r);
+  S.focus = "ans-" + oi;
+  render();
+  announce(`${a.who} says: ${a.options[oi].a}`);
 }
 function pick(n, which, oi) {
   const st = state(n);
@@ -583,7 +639,8 @@ function openHow() {
   modalReturn = $("#howBtn");
   openModal(T("How to play", "HOW TO PLAY"), `<ol>
       <li>${T("Every Wednesday at " + nice7() + " UK time a new case goes live: a ticket or alert, like the ones that land on a real service desk or security team.", "NEW CASE EVERY WEDNESDAY, " + nice7().toUpperCase() + " UK TIME.")}</li>
-      <li>${T("Two pieces of evidence are open. The other three are locked, and opening one costs a clue. Use as few as you dare.", "2 CLUES FREE. 3 MORE COST YOU.")}</li>
+      <li>${T("Ask the caller one question. It's free, but you only get one, so choose well.", "ASK 1 FREE QUESTION.")}</li>
+      <li>${T("Two pieces of evidence are open. Of the three locked ones you can unlock two, and each costs a clue. Use as few as you dare.", "2 CLUES FREE. UNLOCK 2 OF 3. EACH COSTS YOU.")}</li>
       <li>${T("First name what's actually wrong, then pick the fix. A wrong answer is a wrong turn, and you get three across the whole case.", "NAME THE CAUSE, THEN THE FIX. 3 MISSES = GAME OVER.")}</li>
       <li>${T("Fewer clues and wrong turns means a better rank, from \"Made it, just\" up to Head of IT. Share your result: it never gives away the answer.", "FEWER CLUES = HIGHER RANK.")}</li>
       <li>${T("When the next case drops, last week's moves to the archive with a full walkthrough: every clue explained and every wrong answer too.", "LAST WEEK'S CASE GETS A WALKTHROUGH.")}</li>
@@ -607,11 +664,12 @@ function setTheme(k) {
 
 document.addEventListener("click", e => {
   if (!e.target.closest(".dd")) closeMenus();
-  const t = e.target.closest("[data-open],[data-pick],[data-act],[data-theme-set]");
+  const t = e.target.closest("[data-open],[data-pick],[data-ask],[data-act],[data-theme-set]");
   if (!t) return;
   const r = route();
   if (t.dataset.themeSet) return setTheme(t.dataset.themeSet);
   if (t.dataset.open && r.v === "case") return openEvidence(r.n, t.dataset.open);
+  if (t.dataset.ask && r.v === "case") return ask(r.n, +t.dataset.ask);
   if (t.dataset.pick && r.v === "case") { if (t.getAttribute("aria-disabled") === "true") return; const [w, i] = t.dataset.pick.split(":"); return pick(r.n, w, +i); }
   const a = t.dataset.act;
   if (a === "close" && (e.target === t || t.tagName === "BUTTON")) return closeModal();

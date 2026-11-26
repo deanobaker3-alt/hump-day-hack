@@ -451,6 +451,41 @@ a.wt:hover{border-color:var(--accent)}
   .brand{gap:8px}.brand .logo{width:30px;height:30px}
   .brand b{letter-spacing:1px}
 }
+/* ask the caller */
+.ask{margin-top:14px}
+.ask .atip{margin:12px -18px -16px;border-radius:0 0 var(--r) var(--r)}
+[data-theme="pixel"] .ask .atip{margin:12px -18px -16px}
+.ask .asub{margin:-4px 0 10px;font:12.5px var(--mono);color:var(--muted)}
+.aqs{display:grid;gap:6px}
+.aq{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;padding:9px 12px;border:1px solid var(--line2);border-radius:9px;background:var(--panel2);font-size:14px;line-height:1.45;color:var(--text)}
+button.aq{transition:border-color .2s,transform .15s}
+button.aq:hover{border-color:var(--accent)}
+button.aq:active{transform:scale(.99)}
+.aq .k{flex:none;width:22px;height:22px;border-radius:6px;border:1px solid var(--line2);display:grid;place-items:center;font:600 11px var(--mono);color:var(--muted)}
+.aq.done{color:var(--muted);border-style:dashed}
+.aq.mine{color:var(--text);border-style:solid;border-color:var(--cyan)}
+.aq.mine .k{background:var(--cyan);border-color:var(--cyan);color:#04202a}
+.aq .tagok,.ev-h .tagok{font:600 10px var(--mono);letter-spacing:1px;text-transform:uppercase;color:var(--green);margin-left:8px;white-space:nowrap}
+.ev-h .tagok{margin:4px 0 0;border:1px solid currentColor;border-radius:5px;padding:1px 6px}
+.ans{margin:0 0 4px 32px;padding:9px 12px;border-radius:0 9px 9px 9px;font-size:14px;background:color-mix(in srgb,var(--cyan) 9%,transparent);border:1px solid color-mix(in srgb,var(--cyan) 30%,transparent)}
+.ans:not(.mine){opacity:1;background:var(--panel2);border-color:var(--line)}
+.ans b{font:600 10.5px var(--mono);letter-spacing:1px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:2px}
+.ans:not(.mine) b{color:var(--muted)}
+.ans:focus{outline:none}
+.ans:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ev.spent .ev-ic,.ev.spent .ev-t b{color:var(--muted)}
+.spent{font:12.5px var(--mono);color:var(--muted)}
+.inst{list-style:none;margin:12px 0 0;padding:10px 12px;border:1px dashed var(--line2);border-radius:9px;text-align:left;font-size:13.5px;display:grid;gap:4px}
+.inst li::before{content:"› ";color:var(--cyan);font-family:var(--mono)}
+[data-theme="pixel"] .aq,[data-theme="pixel"] .ans,[data-theme="pixel"] .inst,[data-theme="pixel"] .aq .k{border-radius:0}
+[data-theme="pixel"] .aq,[data-theme="pixel"] .ans,[data-theme="pixel"] .inst{font-size:19px;line-height:1.25}
+[data-theme="pixel"] .aq .k,[data-theme="pixel"] .ans b,[data-theme="pixel"] .aq .tagok,[data-theme="pixel"] .ev-h .tagok{font:7px/1.8 var(--head)}
+[data-theme="pixel"] .ask .asub,[data-theme="pixel"] .spent{font-size:17px}
+[data-theme="light"] .aq.mine .k{color:#fff}
+[data-theme="pixel"] .aq.mine .k{font:700 13px var(--mono)}
+[data-theme="light"] .ans b{color:#055a78}
+[data-theme="light"] .aq .tagok,[data-theme="light"] .ev-h .tagok{color:#0b6b45}
+@media (max-width:520px){.ans{margin-left:0}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;transition-delay:0s!important}}
 /* contrast tune-ups (WCAG AA, 4.5:1 for small text) */
 [data-theme="light"] .fb.bad b{color:#a8203a}
